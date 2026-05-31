@@ -5,10 +5,22 @@ export { LegacyClient } from "./legacy-client.js";
 export { buildHistoricalCycleCandidates, buildKardexEndpointCandidates, cycleVariants, parseCycle } from "./legacy-client.js";
 export type { KardexEndpointCandidate, ParsedCycle } from "./legacy-client.js";
 export { getStudentCard } from "./student-card.js";
+export {
+  completedCoursesFromHistory,
+  completedCoursesFromKardex,
+  cycleSummariesFromCourses,
+  progressFromKardex,
+  schedulesByCycle,
+  uniqueCyclesFromCourses,
+} from "./summary.js";
 export type { LeoFriendlyClient } from "./friendly.js";
 export type {
   ApiEnvelope,
+  AcademicCycleSummary,
+  AcademicProgress,
   BoletasHistoricas,
+  CompletedCourse,
+  CycleSchedule,
   GradeItem,
   KardexAverages,
   KardexAttempt,

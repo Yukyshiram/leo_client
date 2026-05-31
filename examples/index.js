@@ -36,6 +36,14 @@ async function main() {
   console.log("Ciclos historicos:", Object.keys(historial.byCycle).length);
   console.log("Kardex:", kardex.data ? "encontrado" : "no disponible");
   console.log("Tarjeta:", tarjeta.ok ? "encontrada" : `no disponible (${tarjeta.reason ?? "sin detalle"})`);
+
+  const ciclos = await leo.academic.summary.cycles(plan, plans);
+  const materiasCursadas = await leo.academic.summary.completedCourses(plan, plans);
+  const progreso = await leo.academic.summary.progress(plan);
+
+  console.log("Ciclos cursados:", ciclos);
+  console.log("Materias cursadas:", materiasCursadas.length);
+  console.log("Progreso:", progreso);
 }
 
 main().catch((error) => {

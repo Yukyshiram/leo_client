@@ -229,6 +229,11 @@ await leo.academic.classes(idprograma, ciclo);
 await leo.academic.grades(idprograma, ciclo);
 await leo.academic.history.grades(idprograma, plans);
 await leo.academic.transcript(plan);
+
+await leo.academic.summary.cycles(plan, plans);
+await leo.academic.summary.completedCourses(plan, plans);
+await leo.academic.summary.progress(plan);
+await leo.academic.summary.schedulesByCycle(plan);
 ```
 
 Aliases disponibles:
@@ -244,6 +249,106 @@ leo.academic.boletasHistoricas(idprograma, plans);
 leo.academic.history.boletas(idprograma, plans);
 leo.academic.kardex(plan);
 ```
+
+## Resumen Academico Para Webs
+
+Para construir una web o dashboard, la libreria incluye una capa de resumen sobre kardex/historial.
+
+```js
+const plans = await leo.student.plans();
+const plan = plans.find((item) => item.idestatus === "AC") ?? plans[0];
+
+const ciclos = await leo.academic.summary.cycles(plan, plans);
+const materiasCursadas = await leo.academic.summary.completedCourses(plan, plans);
+const progreso = await leo.academic.summary.progress(plan);
+
+console.log(ciclos);
+console.log(materiasCursadas);
+console.log(progreso);
+```
+
+Salida ejemplo:
+
+```js
+[
+  { ciclo: "2024-B", materias: 7, creditos: 42, promedio: 91.14 },
+  { ciclo: "2025-A", materias: 6, creditos: 48, promedio: 92.5 },
+  { ciclo: "2025-B", materias: 6, creditos: 48, promedio: 93.67 },
+  { ciclo: "2026-A", materias: 9, creditos: 70, promedio: 87.44 }
+]
+```
+
+`completedCourses()` usa kardex como fuente principal porque trae `clasificacion`, `creditos`, `idarea` y `descarea`. Si no hay kardex y pasas `plans`, usa boletas historicas como fallback.
+
+```js
+{
+  ciclo: "2024-B",
+  crn: "201957",
+  clave: "V0709",
+  nombre: "INDUCCION A LA INGENIERIA",
+  calificacion: "100 (CIEN)",
+  captura: "ORDINARIO (OE)",
+  creditos: 5,
+  horas: 80,
+  fechaCaptura: "02/DIC/2024",
+  area: "BC",
+  areaDescripcion: "BASICO COMUN",
+  raw: {}
+}
+```
+
+`progress()` resume creditos y promedio general:
+
+```js
+{
+  creditosAdquiridos: 192,
+  creditosFaltantes: 183,
+  creditosTotales: 375,
+  porcentajeCreditos: 51.2,
+  promedioGeneral: 94.4,
+  raw: {}
+}
+```
+
+## Horarios De Ciclos Pasados
+
+Tambien puedes intentar consultar horarios de ciclos anteriores. LEO los devuelve cuando aun los conserva para el plan/ciclo solicitado.
+
+```js
+const horarios = await leo.academic.summary.schedulesByCycle(plan);
+console.log(horarios);
+```
+
+O limitarlo a ciclos especificos:
+
+```js
+const horarios = await leo.academic.summary.schedulesByCycle(plan, ["2024-B", "2025-A", "2026-A"]);
+```
+
+Salida:
+
+```js
+[
+  {
+    ciclo: "2024-B",
+    materias: [
+      {
+        crn: "201957",
+        idcurso: "V0709",
+        nombcurso: "INDUCCION A LA INGENIERIA",
+        horarios: []
+      }
+    ]
+  },
+  {
+    ciclo: "2023-A",
+    materias: [],
+    error: "No se pudo obtener horario en ninguna variante de ciclo"
+  }
+]
+```
+
+Nota: para materias cursadas, kardex suele ser mas confiable. Para horarios historicos, el endpoint legacy puede regresar datos para algunos ciclos y vacio/error para otros.
 
 ## Respuestas
 
@@ -484,6 +589,10 @@ leo.session.use(session);
 ```ts
 import {
   createLeoClient,
+  type AcademicCycleSummary,
+  type AcademicProgress,
+  type CompletedCourse,
+  type CycleSchedule,
   type GradeItem,
   type KardexData,
   type KardexResult,
@@ -499,6 +608,10 @@ const boletas: GradeItem[] = await leo.academic.grades(plans[0].idprograma!, pla
 const kardex: KardexResult<KardexData> = await leo.academic.transcript(plans[0]);
 const tarjeta = await leo.student.profileCard();
 const studentCard: StudentCardValue | null = tarjeta.value;
+const ciclos: AcademicCycleSummary[] = await leo.academic.summary.cycles(plans[0], plans);
+const materiasCursadas: CompletedCourse[] = await leo.academic.summary.completedCourses(plans[0], plans);
+const progreso: AcademicProgress = await leo.academic.summary.progress(plans[0]);
+const horarios: CycleSchedule[] = await leo.academic.summary.schedulesByCycle(plans[0]);
 ```
 
 Tipos principales:

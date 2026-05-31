@@ -1,6 +1,18 @@
 import { LeoEndpointCX } from "./sdk.js";
+import {
+  completedCoursesFromHistory,
+  completedCoursesFromKardex,
+  cycleSummariesFromCourses,
+  progressFromKardex,
+  schedulesByCycle,
+  uniqueCyclesFromCourses,
+} from "./summary.js";
 import type {
+  AcademicCycleSummary,
+  AcademicProgress,
   BoletasHistoricas,
+  CompletedCourse,
+  CycleSchedule,
   GradeItem,
   KardexData,
   KardexResult,
@@ -34,6 +46,12 @@ export type LeoFriendlyClient = {
     };
     kardex: (plan: PlanItem, studentCode?: string | number) => Promise<KardexResult<KardexData>>;
     transcript: (plan: PlanItem, studentCode?: string | number) => Promise<KardexResult<KardexData>>;
+    summary: {
+      completedCourses: (plan: PlanItem, plans?: PlanItem[], studentCode?: string | number) => Promise<CompletedCourse[]>;
+      cycles: (plan: PlanItem, plans?: PlanItem[], studentCode?: string | number) => Promise<AcademicCycleSummary[]>;
+      progress: (plan: PlanItem, studentCode?: string | number) => Promise<AcademicProgress>;
+      schedulesByCycle: (plan: PlanItem, cycles?: string[], studentCode?: string | number) => Promise<CycleSchedule[]>;
+    };
   };
   session: {
     current: () => LoginSuccess | null;
@@ -64,6 +82,46 @@ export function createLeoClient(options: LeoEndpointCXOptions): LeoFriendlyClien
     sdk.getHistoricalBoletas(idprograma, plans, normalizeStudentCode(studentCode));
   const getKardex = (plan: PlanItem, studentCode?: string | number) =>
     sdk.getKardexAdvanced(plan, normalizeStudentCode(studentCode));
+  const completedCourses = async (plan: PlanItem, plans?: PlanItem[], studentCode?: string | number) => {
+    const kardex = await getKardex(plan, studentCode);
+    if (kardex.data?.historiaAcademicaKardex?.length) {
+      return completedCoursesFromKardex(kardex.data);
+    }
+
+    if (plans && plan.idprograma) {
+      const history = await getHistoricalBoletas(plan.idprograma, plans, studentCode);
+      return completedCoursesFromHistory(history);
+    }
+
+    return [];
+  };
+  const cycleSummaries = async (plan: PlanItem, plans?: PlanItem[], studentCode?: string | number) =>
+    cycleSummariesFromCourses(await completedCourses(plan, plans, studentCode));
+  const progress = async (plan: PlanItem, studentCode?: string | number) => {
+    const kardex = await getKardex(plan, studentCode);
+    return progressFromKardex(kardex.data);
+  };
+  const getSchedulesByCycle = async (plan: PlanItem, cycles?: string[], studentCode?: string | number) => {
+    if (!plan.idprograma) return [];
+    let targetCycles = cycles;
+
+    if (!targetCycles) {
+      const courses = await completedCourses(plan, undefined, studentCode);
+      targetCycles = uniqueCyclesFromCourses(courses);
+    }
+
+    const entries = await Promise.all(
+      targetCycles.map(async (cycle) => {
+        try {
+          return [cycle, await getSchedule(plan.idprograma!, cycle, studentCode)] as const;
+        } catch (error) {
+          return [cycle, error instanceof Error ? error : new Error(String(error))] as const;
+        }
+      }),
+    );
+
+    return schedulesByCycle(Object.fromEntries(entries));
+  };
 
   return {
     login: {
@@ -87,6 +145,12 @@ export function createLeoClient(options: LeoEndpointCXOptions): LeoFriendlyClien
       },
       kardex: getKardex,
       transcript: getKardex,
+      summary: {
+        completedCourses,
+        cycles: cycleSummaries,
+        progress,
+        schedulesByCycle: getSchedulesByCycle,
+      },
     },
     session: {
       current() {

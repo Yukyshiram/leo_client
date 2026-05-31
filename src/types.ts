@@ -182,6 +182,46 @@ export type StudentCardResult<TValue = StudentCardValue> = {
   reason?: string;
 };
 
+export type AcademicCycleSummary = {
+  ciclo: string;
+  materias: number;
+  creditos: number;
+  promedio: number | null;
+};
+
+export type CompletedCourse = {
+  ciclo: string;
+  crn?: string;
+  clave?: string;
+  nombre?: string;
+  calificacion?: string;
+  captura?: string;
+  creditos: number;
+  horas?: number;
+  fechaCaptura?: string;
+  area?: string;
+  areaDescripcion?: string;
+  raw: KardexCourse | GradeItem;
+};
+
+export type AcademicProgress = {
+  creditosAdquiridos: number | null;
+  creditosFaltantes: number | null;
+  creditosTotales: number | null;
+  porcentajeCreditos: number | null;
+  promedioGeneral: number | null;
+  raw: {
+    creditos?: KardexCredits;
+    promedios?: KardexAverages;
+  };
+};
+
+export type CycleSchedule = {
+  ciclo: string;
+  materias: ScheduleItem[];
+  error?: string;
+};
+
 export type LeoEndpointCXOptions = {
   privateKey: string;
   retries?: number;
