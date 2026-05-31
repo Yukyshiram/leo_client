@@ -2,6 +2,11 @@ export type LoginSuccess = {
   id_token: string;
   usua_id: string;
   vigencia: string;
+  usuario_mov?: string;
+  fecha_mov?: string;
+  ip_mov?: string;
+  vigencia_extra?: string;
+  [key: string]: unknown;
 };
 
 export type LoginEnvelope = {

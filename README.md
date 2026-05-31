@@ -260,7 +260,11 @@ console.log(session);
 {
   "id_token": "eyJhbGciOi...",
   "usua_id": "A00000000",
-  "vigencia": "2026-05-30T23:59:59.000Z"
+  "vigencia": "2026-05-30T23:59:59.000Z",
+  "usuario_mov": "A00000000",
+  "fecha_mov": "2026-05-30T23:29:59.000Z",
+  "ip_mov": "10.0.0.1",
+  "vigencia_extra": "2026-05-31T00:14:59.000Z"
 }
 ```
 
@@ -504,6 +508,10 @@ type LoginSuccess = {
   id_token: string;
   usua_id: string;
   vigencia: string;
+  usuario_mov?: string;
+  fecha_mov?: string;
+  ip_mov?: string;
+  vigencia_extra?: string;
 };
 
 type PlanItem = {
