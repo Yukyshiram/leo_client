@@ -1,0 +1,61 @@
+{
+  "name": "@skl-connect/leo-client",
+  "version": "0.1.0",
+  "description": "Node.js and TypeScript client for UDG LEO academic endpoints.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "examples",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "leo",
+    "udg",
+    "universidad-de-guadalajara",
+    "academic",
+    "academico",
+    "student",
+    "alumnos",
+    "grades",
+    "boletas",
+    "kardex",
+    "transcript",
+    "schedule",
+    "horarios",
+    "nodejs",
+    "typescript",
+    "sdk",
+    "api-client"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --sourcemap --clean --out-dir dist",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "prepack": "npm run typecheck && npm run test && npm run build"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "jsonwebtoken": "^9.0.3"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^25.5.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.14"
+  }
+}

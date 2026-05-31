@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+.env.*
+token.pem
+*.tgz
+npm-debug.log*
+.DS_Store
