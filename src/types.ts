@@ -240,6 +240,85 @@ export type AcademicFullProfile = {
   studentCard: StudentCardResult<StudentCardValue>;
 };
 
+export type CompactStudentProfile = {
+  code: string | null;
+  name?: string;
+  email?: string;
+  center?: string;
+  campus?: string;
+};
+
+export type CompactPlanProfile = {
+  id?: string;
+  name?: string;
+  status?: string;
+  activeCycle?: string;
+  admissionCycle?: string;
+  level?: string;
+};
+
+export type CompactScheduleCourse = {
+  crn?: string;
+  clave?: string;
+  nombre?: string;
+  profesor?: string;
+  dias?: string;
+  hora?: string;
+  aula?: string;
+  seccion?: string;
+  creditos?: string;
+};
+
+export type CompactCycleSchedule = {
+  ciclo: string;
+  materias: CompactScheduleCourse[];
+  error?: string;
+};
+
+export type CompactStudentCard = {
+  ok: boolean;
+  reason?: string;
+  nombre?: string;
+  centro?: string;
+  centroDesc?: string;
+  sede?: string;
+  tieneFoto: boolean;
+  tieneFirma: boolean;
+  tieneQr: boolean;
+};
+
+export type CompactKardex = {
+  found: boolean;
+  attempts: KardexAttempt[];
+  courses: number;
+  creditos?: KardexCredits;
+  promedios?: KardexAverages;
+};
+
+export type AcademicCompactProfile = {
+  student: CompactStudentProfile;
+  plan: CompactPlanProfile;
+  stats: {
+    plans: number;
+    cycles: number;
+    completedCourses: number;
+    scheduleCycles: number;
+    scheduleCourses: number;
+    kardexCourses: number;
+    creditosAdquiridos: number | null;
+    creditosFaltantes: number | null;
+    creditosTotales: number | null;
+    porcentajeCreditos: number | null;
+    promedioGeneral: number | null;
+  };
+  cycles: AcademicCycleSummary[];
+  completedCourses: Array<Omit<CompletedCourse, "raw">>;
+  progress: AcademicProgress;
+  schedules: CompactCycleSchedule[];
+  kardex: CompactKardex;
+  studentCard: CompactStudentCard;
+};
+
 export type LeoEndpointCXOptions = {
   privateKey: string;
   retries?: number;

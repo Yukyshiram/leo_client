@@ -1,14 +1,11 @@
-import { createLeoClient } from "@skl-connect/leo-client";
-import { readFileSync } from "node:fs";
+import { createLeoClientFromPemFile } from "@skl-connect/leo-client";
 
 const codigo = "";
 const password = "";
 const ciclo = "2026-A";
 const tokenPem = "./token.pem";
 
-const leo = createLeoClient({
-  privateKey: readFileSync(tokenPem, "utf8"),
-});
+const leo = createLeoClientFromPemFile(tokenPem);
 
 await leo.login.signIn(codigo, password);
 
@@ -19,9 +16,9 @@ if (!plan?.idprograma) {
   throw new Error("No se encontro un plan academico con idprograma.");
 }
 
-const materias = await leo.academic.classes(plan.idprograma, ciclo);
-const boletas = await leo.academic.grades(plan.idprograma, ciclo);
+const profile = await leo.academic.summary.fullProfileCompact(plan, plans);
 
-console.log("Plan:", plan.descprograma ?? plan.idprograma);
-console.log("Materias:", materias.length);
-console.log("Boletas:", boletas.length);
+console.log("Plan:", profile.plan.name ?? profile.plan.id);
+console.log("Ciclo activo:", profile.plan.activeCycle ?? ciclo);
+console.log("Resumen:", profile.stats);
+console.table(profile.cycles);

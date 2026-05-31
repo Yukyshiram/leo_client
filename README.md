@@ -21,8 +21,7 @@ Requiere Node.js 20 o superior.
 Crea un `index.js` en la raiz de tu proyecto:
 
 ```js
-const { createLeoClient } = require("@skl-connect/leo-client");
-const { readFileSync } = require("node:fs");
+const { createLeoClientFromPemFile } = require("@skl-connect/leo-client");
 
 const codigo = "";
 const password = "";
@@ -30,8 +29,7 @@ const ciclo = "2026-A";
 const tokenPem = "./token.pem";
 
 async function main() {
-  const privateKey = readFileSync(tokenPem, "utf8");
-  const leo = createLeoClient({ privateKey });
+  const leo = createLeoClientFromPemFile(tokenPem);
 
   await leo.login.signIn(codigo, password);
 
@@ -42,12 +40,12 @@ async function main() {
     throw new Error("No se encontro un plan academico con idprograma.");
   }
 
-  const materias = await leo.academic.classes(plan.idprograma, ciclo);
-  const boletas = await leo.academic.grades(plan.idprograma, ciclo);
+  const profile = await leo.academic.summary.fullProfileCompact(plan, plans);
 
-  console.log("Plan:", plan.descprograma ?? plan.idprograma);
-  console.log("Materias:", materias.length);
-  console.log("Boletas:", boletas.length);
+  console.log("Plan:", profile.plan.name ?? profile.plan.id);
+  console.log("Ciclo activo:", profile.plan.activeCycle ?? ciclo);
+  console.log("Resumen:", profile.stats);
+  console.table(profile.cycles);
 }
 
 main().catch(console.error);
@@ -72,8 +70,8 @@ Salida esperada:
 
 ```txt
 Plan: INGENIERIA INFORMATICA
-Materias: 7
-Boletas: 7
+Ciclo activo: 2026-A
+Resumen: { plans: 3, cycles: 4, completedCourses: 26, ... }
 ```
 
 ## Configuracion
@@ -92,11 +90,37 @@ tu-proyecto/
 
 No subas `.env`, `token.pem`, contrasenas, tokens ni respuestas reales a repositorios.
 
-## Ejemplo Completo Con Console.log
+### Sobre `token.pem`
+
+`token.pem` no es una sesion del alumno. Es una llave privada RS256 usada para firmar el JWT que LEO espera en el header `authorization`.
+
+No sirve generar cualquier llave privada nueva si LEO no reconoce su llave publica correspondiente. Si generas un PEM aleatorio y LEO no tiene esa llave publica registrada/esperada, el login va a fallar con `INVALID_CREDENTIALS` o `HTTP_ERROR`.
+
+Formas recomendadas de cargarlo:
+
+```js
+const { createLeoClientFromPemFile } = require("@skl-connect/leo-client");
+
+const leo = createLeoClientFromPemFile("./token.pem");
+```
+
+O manualmente:
 
 ```js
 const { createLeoClient } = require("@skl-connect/leo-client");
 const { readFileSync } = require("node:fs");
+
+const leo = createLeoClient({
+  privateKey: readFileSync("./token.pem", "utf8"),
+});
+```
+
+Para una web publica, no pongas `token.pem` en el frontend. Lo correcto es guardarlo en el servidor y exponer tu propia API, por ejemplo `leo.sklconnect.com`, para que el navegador nunca reciba la llave privada.
+
+## Ejemplo Completo Con Console.log
+
+```js
+const { createLeoClientFromPemFile, isLeoClientError } = require("@skl-connect/leo-client");
 
 const codigo = "";
 const password = "";
@@ -104,46 +128,42 @@ const ciclo = "2026-A";
 const tokenPem = "./token.pem";
 
 async function main() {
-  const leo = createLeoClient({
-    privateKey: readFileSync(tokenPem, "utf8"),
-  });
+  const leo = createLeoClientFromPemFile(tokenPem);
 
-  const session = await leo.login.signIn(codigo, password);
+  await leo.login.signIn(codigo, password);
   const plans = await leo.student.plans();
   const plan = plans.find((item) => item.ciclefectivo === ciclo) ?? plans.find((item) => item.idestatus === "AC") ?? plans[0];
 
-  const materias = await leo.academic.classes(plan.idprograma, ciclo);
-  const boletas = await leo.academic.grades(plan.idprograma, ciclo);
-  const historial = await leo.academic.history.grades(plan.idprograma, plans);
-  const kardex = await leo.academic.transcript(plan);
-  const tarjeta = await leo.student.profileCard();
+  const profile = await leo.academic.summary.fullProfileCompact(plan, plans);
 
-  console.log("Sesion:", {
-    alumno: session.usua_id,
-    vigencia: session.vigencia,
-  });
+  console.log("Alumno:", codigo);
+  console.log("Plan:", profile.plan.name ?? profile.plan.id);
+  console.log("Ciclo activo:", profile.plan.activeCycle ?? ciclo);
+  console.log("Resumen:", profile.stats);
 
-  console.log("Plan:", {
-    programa: plan.idprograma,
-    nombre: plan.descprograma,
-    ciclo: plan.ciclefectivo,
-    estatus: plan.idestatus,
-  });
+  console.log("\nCiclos:");
+  console.table(profile.cycles);
 
-  console.log("Resumen:", {
-    materias: materias.length,
-    boletas: boletas.length,
-    ciclosHistoricos: Object.keys(historial.byCycle).length,
-    kardex: kardex.data ? "encontrado" : "no disponible",
-    tarjeta: tarjeta.ok ? "encontrada" : "no disponible",
-  });
+  console.log("\nMaterias cursadas:");
+  console.table(profile.completedCourses);
 
-  console.log("Primeras materias:", materias.slice(0, 3));
-  console.log("Primeras boletas:", boletas.slice(0, 3));
-  console.log("Kardex:", kardex);
+  console.log("\nHorarios:");
+  for (const schedule of profile.schedules) {
+    console.log(`\n${schedule.ciclo}`);
+    console.table(schedule.materias);
+  }
+
+  console.log("\nKardex:", profile.kardex);
+  console.log("Credencial:", profile.studentCard);
 }
 
 main().catch((error) => {
+  if (isLeoClientError(error)) {
+    console.error("Error LEO:", error.code);
+    console.error(error.message);
+    return;
+  }
+
   console.error("No se pudo consultar LEO:");
   console.error(error);
 });
@@ -152,20 +172,10 @@ main().catch((error) => {
 Ejemplo de salida:
 
 ```txt
-Sesion: { alumno: 'A00000000', vigencia: '2026-05-30T23:59:59.000Z' }
-Plan: {
-  programa: 'INFO',
-  nombre: 'INGENIERIA INFORMATICA',
-  ciclo: '2026-A',
-  estatus: 'AC'
-}
-Resumen: {
-  materias: 7,
-  boletas: 7,
-  ciclosHistoricos: 12,
-  kardex: 'encontrado',
-  tarjeta: 'encontrada'
-}
+Alumno: A00000000
+Plan: INGENIERIA INFORMATICA
+Ciclo activo: 2026-A
+Resumen: { plans: 3, cycles: 4, completedCourses: 26, scheduleCourses: 25, ... }
 ```
 
 ## ESM
@@ -206,7 +216,17 @@ Nota: `STUDENT CARD` puede imprimir strings base64 largos en `foto`, `firma` y `
 
 ## API Principal
 
-La entrada recomendada es `createLeoClient`.
+La entrada recomendada para Node.js es `createLeoClientFromPemFile`.
+
+```js
+const { createLeoClientFromPemFile } = require("@skl-connect/leo-client");
+
+const leo = createLeoClientFromPemFile("./token.pem", {
+  retries: 3,
+});
+```
+
+Si ya tienes la llave privada cargada en memoria, usa `createLeoClient`.
 
 ```js
 const { createLeoClient } = require("@skl-connect/leo-client");
@@ -235,6 +255,7 @@ await leo.academic.summary.completedCourses(plan, plans);
 await leo.academic.summary.progress(plan);
 await leo.academic.summary.schedulesByCycle(plan);
 await leo.academic.summary.fullProfile(plan, plans);
+await leo.academic.summary.fullProfileCompact(plan, plans);
 ```
 
 Aliases disponibles:
@@ -589,8 +610,9 @@ leo.session.use(session);
 
 ```ts
 import {
-  createLeoClient,
+  createLeoClientFromPemFile,
   type AcademicCycleSummary,
+  type AcademicCompactProfile,
   type AcademicProgress,
   type CompletedCourse,
   type CycleSchedule,
@@ -602,7 +624,7 @@ import {
   type StudentCardValue,
 } from "@skl-connect/leo-client";
 
-const leo = createLeoClient({ privateKey });
+const leo = createLeoClientFromPemFile("./token.pem");
 const plans: PlanItem[] = await leo.student.plans();
 const materias: ScheduleItem[] = await leo.academic.classes(plans[0].idprograma!, plans[0].ciclefectivo!);
 const boletas: GradeItem[] = await leo.academic.grades(plans[0].idprograma!, plans[0].ciclefectivo!);
@@ -613,11 +635,56 @@ const ciclos: AcademicCycleSummary[] = await leo.academic.summary.cycles(plans[0
 const materiasCursadas: CompletedCourse[] = await leo.academic.summary.completedCourses(plans[0], plans);
 const progreso: AcademicProgress = await leo.academic.summary.progress(plans[0]);
 const horarios: CycleSchedule[] = await leo.academic.summary.schedulesByCycle(plans[0]);
+const compact: AcademicCompactProfile = await leo.academic.summary.fullProfileCompact(plans[0], plans);
 ```
 
-## Perfil Completo
+## Perfil Compacto
 
-Para una web o API, puedes pedir un perfil academico completo en una sola llamada de alto nivel:
+Para una web o API, usa primero `fullProfileCompact()`. Esta salida evita `raw`, imagenes base64 y objetos enormes.
+
+```js
+const profile = await leo.academic.summary.fullProfileCompact();
+
+console.log(profile.student);
+console.log(profile.plan);
+console.log(profile.stats);
+console.table(profile.cycles);
+console.table(profile.completedCourses);
+console.log(profile.kardex);
+console.log(profile.studentCard);
+```
+
+Salida:
+
+```ts
+type AcademicCompactProfile = {
+  student: CompactStudentProfile;
+  plan: CompactPlanProfile;
+  stats: {
+    plans: number;
+    cycles: number;
+    completedCourses: number;
+    scheduleCycles: number;
+    scheduleCourses: number;
+    kardexCourses: number;
+    creditosAdquiridos: number | null;
+    creditosFaltantes: number | null;
+    creditosTotales: number | null;
+    porcentajeCreditos: number | null;
+    promedioGeneral: number | null;
+  };
+  cycles: AcademicCycleSummary[];
+  completedCourses: Array<Omit<CompletedCourse, "raw">>;
+  progress: AcademicProgress;
+  schedules: CompactCycleSchedule[];
+  kardex: CompactKardex;
+  studentCard: CompactStudentCard;
+};
+```
+
+## Perfil Completo Raw
+
+Si necesitas toda la respuesta de LEO, incluyendo datos personales, objetos raw y base64 de credencial, usa `fullProfile()`:
 
 ```js
 const profile = await leo.academic.summary.fullProfile();
@@ -739,11 +806,17 @@ type ScheduleItem = {
   crn?: string;
   idcurso?: string;
   nombcurso?: string;
+  clave?: string;
+  nombre?: string;
   numeseccion?: string;
   idcampus?: string;
   creditos?: string;
   horarios?: ScheduleBlock[];
   profesores?: ProfessorItem[];
+  profesor?: string;
+  dias?: string;
+  hora?: string;
+  aula?: string;
   tiporegistro?: string;
 };
 

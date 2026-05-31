@@ -1,5 +1,7 @@
 export { LeoEndpointCX } from "./sdk.js";
 export { createLeoClient } from "./friendly.js";
+export { createLeoClientFromPemFile } from "./node.js";
+export type { LeoClientFromPemFileOptions } from "./node.js";
 export { LeoClientError, isLeoClientError } from "./errors.js";
 export type { LeoClientErrorCode } from "./errors.js";
 export { loginWithPem } from "./auth.js";
@@ -19,10 +21,17 @@ export type { LeoFriendlyClient } from "./friendly.js";
 export type {
   ApiEnvelope,
   AcademicCycleSummary,
+  AcademicCompactProfile,
   AcademicFullProfile,
   AcademicProgress,
   BoletasHistoricas,
   CompletedCourse,
+  CompactCycleSchedule,
+  CompactKardex,
+  CompactPlanProfile,
+  CompactScheduleCourse,
+  CompactStudentCard,
+  CompactStudentProfile,
   CycleSchedule,
   GradeItem,
   KardexAverages,

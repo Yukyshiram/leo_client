@@ -10,6 +10,7 @@ import {
 } from "./summary.js";
 import type {
   AcademicCycleSummary,
+  AcademicCompactProfile,
   AcademicFullProfile,
   AcademicProgress,
   BoletasHistoricas,
@@ -54,6 +55,7 @@ export type LeoFriendlyClient = {
       progress: (plan: PlanItem, studentCode?: string | number) => Promise<AcademicProgress>;
       schedulesByCycle: (plan: PlanItem, cycles?: string[], studentCode?: string | number) => Promise<CycleSchedule[]>;
       fullProfile: (plan?: PlanItem, plans?: PlanItem[], studentCode?: string | number) => Promise<AcademicFullProfile>;
+      fullProfileCompact: (plan?: PlanItem, plans?: PlanItem[], studentCode?: string | number) => Promise<AcademicCompactProfile>;
     };
   };
   session: {
@@ -69,6 +71,87 @@ export type LeoFriendlyClient = {
 function normalizeStudentCode(value: string | number | undefined): string | undefined {
   if (value === undefined) return undefined;
   return String(value).trim();
+}
+
+function uniqueCycles(...cycles: Array<string | undefined>): string[] {
+  return [...new Set(cycles.filter((cycle): cycle is string => Boolean(cycle)))].sort((a, b) => a.localeCompare(b));
+}
+
+function toCompactProfile(profile: AcademicFullProfile): AcademicCompactProfile {
+  const studentCard = profile.studentCard.value;
+  const kardexData = profile.kardex.data;
+  const planData = kardexData?.planesEstudios ?? profile.plan;
+  const completedCourses = profile.completedCourses.map(({ raw: _raw, ...course }) => course);
+  const schedules = profile.schedules.map((cycle) => ({
+    ciclo: cycle.ciclo,
+    error: cycle.error,
+    materias: cycle.materias.map((course) => ({
+      crn: course.crn,
+      clave: course.clave ?? course.idcurso,
+      nombre: course.nombre ?? course.nombcurso,
+      profesor: course.profesor,
+      dias: course.dias,
+      hora: course.hora,
+      aula: course.aula,
+      seccion: course.numeseccion,
+      creditos: course.creditos,
+    })),
+  }));
+
+  const kardexCourses = kardexData?.historiaAcademicaKardex?.length ?? 0;
+
+  return {
+    student: {
+      code: profile.session?.usua_id ?? null,
+      name: typeof kardexData?.datosPersonales?.nombre === "string" ? kardexData.datosPersonales.nombre : studentCard?.nombre,
+      email: planData.emailudg,
+      center: planData.siglacentro ?? studentCard?.centro,
+      campus: planData.descsede ?? studentCard?.sede,
+    },
+    plan: {
+      id: planData.idprograma,
+      name: planData.descprograma,
+      status: planData.descestatus ?? planData.idestatus,
+      activeCycle: planData.ciclefectivo,
+      admissionCycle: planData.cicladmision,
+      level: planData.descnivel ?? planData.nivel,
+    },
+    stats: {
+      plans: profile.plans.length,
+      cycles: profile.cycles.length,
+      completedCourses: completedCourses.length,
+      scheduleCycles: schedules.length,
+      scheduleCourses: schedules.reduce((sum, cycle) => sum + cycle.materias.length, 0),
+      kardexCourses,
+      creditosAdquiridos: profile.progress.creditosAdquiridos,
+      creditosFaltantes: profile.progress.creditosFaltantes,
+      creditosTotales: profile.progress.creditosTotales,
+      porcentajeCreditos: profile.progress.porcentajeCreditos,
+      promedioGeneral: profile.progress.promedioGeneral,
+    },
+    cycles: profile.cycles,
+    completedCourses,
+    progress: profile.progress,
+    schedules,
+    kardex: {
+      found: Boolean(kardexData),
+      attempts: profile.kardex.attempts,
+      courses: kardexCourses,
+      creditos: kardexData?.creditos,
+      promedios: kardexData?.promedios,
+    },
+    studentCard: {
+      ok: profile.studentCard.ok,
+      reason: profile.studentCard.reason,
+      nombre: studentCard?.nombre,
+      centro: studentCard?.centro,
+      centroDesc: studentCard?.centroDesc,
+      sede: studentCard?.sede,
+      tieneFoto: Boolean(studentCard?.foto),
+      tieneFirma: Boolean(studentCard?.firma),
+      tieneQr: Boolean(studentCard?.qr),
+    },
+  };
 }
 
 export function createLeoClient(options: LeoEndpointCXOptions): LeoFriendlyClient {
@@ -146,7 +229,8 @@ export function createLeoClient(options: LeoEndpointCXOptions): LeoFriendlyClien
 
     const cycles = cycleSummariesFromCourses(completedCourses);
     const progress = progressFromKardex(kardex.data);
-    const schedules = await getSchedulesByCycle(plan, cycles.map((item) => item.ciclo), studentCode);
+    const scheduleCycles = uniqueCycles(...cycles.map((item) => item.ciclo), plan.ciclefectivo);
+    const schedules = await getSchedulesByCycle(plan, scheduleCycles, studentCode);
 
     return {
       session: sdk.getSession(),
@@ -160,6 +244,8 @@ export function createLeoClient(options: LeoEndpointCXOptions): LeoFriendlyClien
       studentCard,
     };
   };
+  const fullProfileCompact = async (planArg?: PlanItem, plansArg?: PlanItem[], studentCode?: string | number) =>
+    toCompactProfile(await fullProfile(planArg, plansArg, studentCode));
 
   return {
     login: {
@@ -189,6 +275,7 @@ export function createLeoClient(options: LeoEndpointCXOptions): LeoFriendlyClien
         progress,
         schedulesByCycle: getSchedulesByCycle,
         fullProfile,
+        fullProfileCompact,
       },
     },
     session: {

@@ -1,5 +1,4 @@
-import { createLeoClient } from "@skl-connect/leo-client";
-import { readFileSync } from "node:fs";
+import { createLeoClientFromPemFile, isLeoClientError } from "@skl-connect/leo-client";
 
 const codigo = "";
 const password = "";
@@ -7,8 +6,7 @@ const ciclo = "2026-A";
 const tokenPem = "./token.pem";
 
 async function main() {
-  const privateKey = readFileSync(tokenPem, "utf8");
-  const leo = createLeoClient({ privateKey });
+  const leo = createLeoClientFromPemFile(tokenPem);
 
   await leo.login.signIn(codigo, password);
 
@@ -19,34 +17,37 @@ async function main() {
     throw new Error("No se encontro un plan academico con idprograma.");
   }
 
-  const [materias, boletas, historial, kardex, tarjeta] = await Promise.all([
-    leo.academic.classes(plan.idprograma, ciclo),
-    leo.academic.grades(plan.idprograma, ciclo),
-    leo.academic.history.grades(plan.idprograma, plans),
-    leo.academic.transcript(plan),
-    leo.student.profileCard(),
-  ]);
+  const profile = await leo.academic.summary.fullProfileCompact(plan, plans);
 
   console.log("Login correcto");
   console.log("Alumno:", codigo);
-  console.log("Plan:", plan.descprograma ?? plan.idprograma);
-  console.log("Ciclo:", ciclo);
-  console.log("Materias:", materias.length);
-  console.log("Boletas:", boletas.length);
-  console.log("Ciclos historicos:", Object.keys(historial.byCycle).length);
-  console.log("Kardex:", kardex.data ? "encontrado" : "no disponible");
-  console.log("Tarjeta:", tarjeta.ok ? "encontrada" : `no disponible (${tarjeta.reason ?? "sin detalle"})`);
+  console.log("Plan:", profile.plan.name ?? profile.plan.id);
+  console.log("Ciclo activo:", profile.plan.activeCycle ?? ciclo);
+  console.log("Resumen:", profile.stats);
 
-  const ciclos = await leo.academic.summary.cycles(plan, plans);
-  const materiasCursadas = await leo.academic.summary.completedCourses(plan, plans);
-  const progreso = await leo.academic.summary.progress(plan);
+  console.log("\nCiclos:");
+  console.table(profile.cycles);
 
-  console.log("Ciclos cursados:", ciclos);
-  console.log("Materias cursadas:", materiasCursadas.length);
-  console.log("Progreso:", progreso);
+  console.log("\nMaterias cursadas:");
+  console.table(profile.completedCourses);
+
+  console.log("\nHorarios:");
+  for (const schedule of profile.schedules) {
+    console.log(`\n${schedule.ciclo}`);
+    console.table(schedule.materias);
+  }
+
+  console.log("\nKardex:", profile.kardex);
+  console.log("Credencial:", profile.studentCard);
 }
 
 main().catch((error) => {
+  if (isLeoClientError(error)) {
+    console.error("No se pudo consultar LEO:", error.code);
+    console.error(error.message);
+    process.exit(1);
+  }
+
   console.error("No se pudo consultar LEO:");
   console.error(error);
   process.exit(1);
