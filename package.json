@@ -53,6 +53,7 @@
     "jsonwebtoken": "^9.0.3"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.5.0",
     "tsup": "^8.5.0",
