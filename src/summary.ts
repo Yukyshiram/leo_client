@@ -37,6 +37,35 @@ function average(values: number[]): number | null {
   return Math.round((total / values.length) * 100) / 100;
 }
 
+function uniqueText(values: Array<string | undefined>): string | undefined {
+  const items = [...new Set(values.map((value) => value?.trim()).filter((value): value is string => Boolean(value)))];
+  return items.length > 0 ? items.join(", ") : undefined;
+}
+
+function professorName(professor: NonNullable<ScheduleItem["profesores"]>[number]): string | undefined {
+  const name = [professor.nombres, professor.apellidos].map((value) => value?.trim()).filter(Boolean).join(" ");
+  return name || undefined;
+}
+
+function classroom(hour: NonNullable<NonNullable<ScheduleItem["horarios"]>[number]["horas"]>[number]): string | undefined {
+  const building = hour.edificio ?? hour.idedificio;
+  return uniqueText([building, hour.numesalon])?.replace(", ", " ");
+}
+
+export function normalizeScheduleItem(item: ScheduleItem): ScheduleItem {
+  const hours = item.horarios?.flatMap((block) => block.horas ?? []) ?? [];
+
+  return {
+    ...item,
+    clave: item.clave ?? item.idcurso,
+    nombre: item.nombre ?? item.nombcurso,
+    profesor: item.profesor ?? uniqueText(item.profesores?.map(professorName) ?? []),
+    dias: item.dias ?? uniqueText(hours.map((hour) => hour.dia)),
+    hora: item.hora ?? uniqueText(hours.map((hour) => hour.hora)),
+    aula: item.aula ?? uniqueText(hours.map(classroom)),
+  };
+}
+
 export function completedCoursesFromKardex(data: KardexData | null | undefined): CompletedCourse[] {
   const courses = data?.historiaAcademicaKardex ?? [];
 
@@ -119,7 +148,7 @@ export function schedulesByCycle(byCycle: Record<string, ScheduleItem[] | Error>
       if (value instanceof Error) {
         return { ciclo, materias: [], error: value.message };
       }
-      return { ciclo, materias: value };
+      return { ciclo, materias: value.map(normalizeScheduleItem) };
     });
 }
 

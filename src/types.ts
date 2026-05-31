@@ -70,11 +70,17 @@ export type ScheduleItem = {
   crn?: string;
   idcurso?: string;
   nombcurso?: string;
+  clave?: string;
+  nombre?: string;
   numeseccion?: string;
   idcampus?: string;
   creditos?: string;
   horarios?: ScheduleBlock[];
   profesores?: ProfessorItem[];
+  profesor?: string;
+  dias?: string;
+  hora?: string;
+  aula?: string;
   tiporegistro?: string;
   [key: string]: unknown;
 };

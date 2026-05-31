@@ -1,6 +1,7 @@
 import { createIss, getSessionToken } from "./crypto.js";
 import { LEGACY_BASE, LEGACY_ORIGIN, LEGACY_REFERER } from "./constants.js";
 import { LeoClientError } from "./errors.js";
+import { normalizeScheduleItem } from "./summary.js";
 import type { ApiEnvelope, BoletasHistoricas, GradeItem, KardexData, KardexResult, PlanItem, ScheduleItem } from "./types.js";
 
 type LegacyMethod = "GET" | "POST";
@@ -219,7 +220,8 @@ export class LegacyClient {
 
     for (const variant of variants) {
       try {
-        return await this.fetchLegacy<ScheduleItem[]>(`${base}/${studentCode}/${idprograma}/${variant}/horarios`);
+        const schedule = await this.fetchLegacy<ScheduleItem[]>(`${base}/${studentCode}/${idprograma}/${variant}/horarios`);
+        return schedule.map(normalizeScheduleItem);
       } catch (error) {
         lastError = error as Error;
       }

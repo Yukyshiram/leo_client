@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { completedCoursesFromKardex, cycleSummariesFromCourses, progressFromKardex } from "../src/summary.js";
+import { completedCoursesFromKardex, cycleSummariesFromCourses, normalizeScheduleItem, progressFromKardex } from "../src/summary.js";
 import type { KardexData } from "../src/types.js";
 
 describe("academic summary helpers", () => {
@@ -85,6 +85,32 @@ describe("academic summary helpers", () => {
       creditosTotales: 375,
       porcentajeCreditos: 51.2,
       promedioGeneral: 94.4,
+    });
+  });
+
+  test("agrega campos amigables a horarios", () => {
+    const schedule = normalizeScheduleItem({
+      crn: "201957",
+      idcurso: "V0709",
+      nombcurso: "INDUCCION A LA INGENIERIA",
+      profesores: [{ nombres: "ADA", apellidos: "LOVELACE" }],
+      horarios: [
+        {
+          horas: [
+            { dia: "LUNES", hora: "07:00-09:00", edificio: "D", numesalon: "101" },
+            { dia: "MIERCOLES", hora: "07:00-09:00", edificio: "D", numesalon: "101" },
+          ],
+        },
+      ],
+    });
+
+    expect(schedule).toMatchObject({
+      clave: "V0709",
+      nombre: "INDUCCION A LA INGENIERIA",
+      profesor: "ADA LOVELACE",
+      dias: "LUNES, MIERCOLES",
+      hora: "07:00-09:00",
+      aula: "D 101",
     });
   });
 });
