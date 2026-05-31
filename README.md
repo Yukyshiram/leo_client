@@ -65,6 +65,7 @@ Tambien puedes revisar ejemplos completos en:
 examples/commonjs/index.cjs
 examples/esm/index.js
 examples/index.js
+examples/inspect-full/index.cjs
 ```
 
 Salida esperada:
@@ -179,6 +180,29 @@ const leo = createLeoClient({
   privateKey: readFileSync("./token.pem", "utf8"),
 });
 ```
+
+## Inspeccionar Todas Las Salidas
+
+Si quieres ver todo lo que responde LEO, incluyendo datos personales y base64 de tarjeta, usa el ejemplo completo:
+
+```bash
+node examples/inspect-full/index.cjs
+```
+
+Ese ejemplo imprime:
+
+```txt
+SESSION
+PLANS
+SELECTED PLAN
+MATERIAS
+BOLETAS
+HISTORIAL
+KARDEX
+STUDENT CARD
+```
+
+Nota: `STUDENT CARD` puede imprimir strings base64 largos en `foto`, `firma` y `qr`.
 
 ## API Principal
 
@@ -454,11 +478,23 @@ leo.session.use(session);
 ## TypeScript
 
 ```ts
-import { createLeoClient, type PlanItem, type KardexResult } from "@skl-connect/leo-client";
+import {
+  createLeoClient,
+  type GradeItem,
+  type KardexData,
+  type KardexResult,
+  type PlanItem,
+  type ScheduleItem,
+  type StudentCardValue,
+} from "@skl-connect/leo-client";
 
 const leo = createLeoClient({ privateKey });
 const plans: PlanItem[] = await leo.student.plans();
-const kardex: KardexResult = await leo.academic.transcript(plans[0]);
+const materias: ScheduleItem[] = await leo.academic.classes(plans[0].idprograma!, plans[0].ciclefectivo!);
+const boletas: GradeItem[] = await leo.academic.grades(plans[0].idprograma!, plans[0].ciclefectivo!);
+const kardex: KardexResult<KardexData> = await leo.academic.transcript(plans[0]);
+const tarjeta = await leo.student.profileCard();
+const studentCard: StudentCardValue | null = tarjeta.value;
 ```
 
 Tipos principales:
@@ -472,27 +508,62 @@ type LoginSuccess = {
 
 type PlanItem = {
   idcentro?: string;
+  siglacentro?: string;
+  siiacampus?: string;
+  desccentro?: string;
   idsede?: string;
+  descsede?: string;
   idprograma?: string;
+  descprograma?: string;
   nivel?: string;
   cicladmision?: string;
   ciclefectivo?: string;
   idestatus?: string;
-  descprograma?: string;
+  descestatus?: string;
+  tipoestatus?: string;
+  idPlan?: string;
+  descnivel?: string;
+  certificacion?: string | null;
+  emailudg?: string;
+};
+
+type ScheduleItem = {
+  crn?: string;
+  idcurso?: string;
+  nombcurso?: string;
+  numeseccion?: string;
+  idcampus?: string;
+  creditos?: string;
+  horarios?: ScheduleBlock[];
+  profesores?: ProfessorItem[];
+  tiporegistro?: string;
+};
+
+type GradeItem = {
+  crn?: string;
+  idcurso?: string;
+  nombcurso?: string;
+  caliordinario?: string | null;
+  caliordiletra?: string | null;
+  caliordirolad?: string | null;
+  caliextraordi?: string | null;
+  caliextrletra?: string | null;
+  caliextrrolad?: string | null;
+  idciclo?: string;
 };
 
 type BoletasHistoricas = {
-  byCycle: Record<string, unknown[]>;
-  consolidated: Array<{ ciclo: string; boleta: unknown }>;
+  byCycle: Record<string, GradeItem[]>;
+  consolidated: Array<{ ciclo: string; boleta: GradeItem }>;
 };
 
 type KardexResult = {
-  data: unknown | null;
+  data: KardexData | null;
   attempts: KardexAttempt[];
 };
 
 type StudentCardResult = {
-  value: unknown | null;
+  value: StudentCardValue | null;
   ok: boolean;
   reason?: string;
 };

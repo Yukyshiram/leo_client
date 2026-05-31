@@ -1,7 +1,18 @@
 import { loginWithPem } from "./auth.js";
 import { LegacyClient } from "./legacy-client.js";
 import { getStudentCard } from "./student-card.js";
-import type { BoletasHistoricas, KardexResult, LeoEndpointCXOptions, LoginSuccess, PlanItem, StudentCardResult } from "./types.js";
+import type {
+  BoletasHistoricas,
+  GradeItem,
+  KardexData,
+  KardexResult,
+  LeoEndpointCXOptions,
+  LoginSuccess,
+  PlanItem,
+  ScheduleItem,
+  StudentCardResult,
+  StudentCardValue,
+} from "./types.js";
 
 export class LeoEndpointCX {
   private readonly privateKey: string;
@@ -53,12 +64,12 @@ export class LeoEndpointCX {
     return this.client().getPlans(studentCode ?? this.studentCode ?? s.usua_id);
   }
 
-  async getSchedule(idprograma: string, ciclo: string, studentCode?: string): Promise<unknown[]> {
+  async getSchedule(idprograma: string, ciclo: string, studentCode?: string): Promise<ScheduleItem[]> {
     const s = this.requireSession();
     return this.client().getSchedule(studentCode ?? this.studentCode ?? s.usua_id, idprograma, ciclo);
   }
 
-  async getBoletas(idprograma: string, ciclo: string, studentCode?: string): Promise<unknown[]> {
+  async getBoletas(idprograma: string, ciclo: string, studentCode?: string): Promise<GradeItem[]> {
     const s = this.requireSession();
     return this.client().getBoletas(studentCode ?? this.studentCode ?? s.usua_id, idprograma, ciclo);
   }
@@ -68,12 +79,12 @@ export class LeoEndpointCX {
     return this.client().getHistoricalBoletas(studentCode ?? this.studentCode ?? s.usua_id, idprograma, plans);
   }
 
-  async getKardexAdvanced(plan: PlanItem, studentCode?: string): Promise<KardexResult> {
+  async getKardexAdvanced(plan: PlanItem, studentCode?: string): Promise<KardexResult<KardexData>> {
     const s = this.requireSession();
     return this.client().getKardexAdvanced(studentCode ?? this.studentCode ?? s.usua_id, plan);
   }
 
-  async getStudentCard(session?: LoginSuccess): Promise<StudentCardResult> {
+  async getStudentCard(session?: LoginSuccess): Promise<StudentCardResult<StudentCardValue>> {
     return getStudentCard(session ?? this.requireSession());
   }
 }

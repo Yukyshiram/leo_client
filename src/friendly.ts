@@ -1,11 +1,15 @@
 import { LeoEndpointCX } from "./sdk.js";
 import type {
   BoletasHistoricas,
+  GradeItem,
+  KardexData,
   KardexResult,
   LeoEndpointCXOptions,
   LoginSuccess,
   PlanItem,
+  ScheduleItem,
   StudentCardResult,
+  StudentCardValue,
 } from "./types.js";
 
 export type LeoFriendlyClient = {
@@ -15,21 +19,21 @@ export type LeoFriendlyClient = {
   };
   student: {
     plans: (studentCode?: string | number) => Promise<PlanItem[]>;
-    card: () => Promise<StudentCardResult>;
-    profileCard: () => Promise<StudentCardResult>;
+    card: () => Promise<StudentCardResult<StudentCardValue>>;
+    profileCard: () => Promise<StudentCardResult<StudentCardValue>>;
   };
   academic: {
-    schedule: (idprograma: string, ciclo: string, studentCode?: string | number) => Promise<unknown[]>;
-    classes: (idprograma: string, ciclo: string, studentCode?: string | number) => Promise<unknown[]>;
-    boletas: (idprograma: string, ciclo: string, studentCode?: string | number) => Promise<unknown[]>;
-    grades: (idprograma: string, ciclo: string, studentCode?: string | number) => Promise<unknown[]>;
+    schedule: (idprograma: string, ciclo: string, studentCode?: string | number) => Promise<ScheduleItem[]>;
+    classes: (idprograma: string, ciclo: string, studentCode?: string | number) => Promise<ScheduleItem[]>;
+    boletas: (idprograma: string, ciclo: string, studentCode?: string | number) => Promise<GradeItem[]>;
+    grades: (idprograma: string, ciclo: string, studentCode?: string | number) => Promise<GradeItem[]>;
     boletasHistoricas: (idprograma: string, plans: PlanItem[], studentCode?: string | number) => Promise<BoletasHistoricas>;
     history: {
       boletas: (idprograma: string, plans: PlanItem[], studentCode?: string | number) => Promise<BoletasHistoricas>;
       grades: (idprograma: string, plans: PlanItem[], studentCode?: string | number) => Promise<BoletasHistoricas>;
     };
-    kardex: (plan: PlanItem, studentCode?: string | number) => Promise<KardexResult>;
-    transcript: (plan: PlanItem, studentCode?: string | number) => Promise<KardexResult>;
+    kardex: (plan: PlanItem, studentCode?: string | number) => Promise<KardexResult<KardexData>>;
+    transcript: (plan: PlanItem, studentCode?: string | number) => Promise<KardexResult<KardexData>>;
   };
   session: {
     current: () => LoginSuccess | null;

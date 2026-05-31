@@ -1,6 +1,6 @@
 import { createIss, getSessionToken } from "./crypto.js";
 import { LEGACY_BASE, LEGACY_ORIGIN, LEGACY_REFERER } from "./constants.js";
-import type { ApiEnvelope, BoletasHistoricas, KardexResult, PlanItem } from "./types.js";
+import type { ApiEnvelope, BoletasHistoricas, GradeItem, KardexData, KardexResult, PlanItem, ScheduleItem } from "./types.js";
 
 type LegacyMethod = "GET" | "POST";
 type CycleTerm = "A" | "B";
@@ -207,14 +207,14 @@ export class LegacyClient {
     return this.fetchLegacy<PlanItem[]>(`${LEGACY_BASE}/alumnos-esc/${studentCode}/planes-estudios`);
   }
 
-  async getSchedule(studentCode: string, idprograma: string, ciclo: string): Promise<unknown[]> {
+  async getSchedule(studentCode: string, idprograma: string, ciclo: string): Promise<ScheduleItem[]> {
     const base = `${LEGACY_BASE}/alumnos-esc`;
     const variants = cycleVariants(ciclo);
     let lastError: Error | null = null;
 
     for (const variant of variants) {
       try {
-        return await this.fetchLegacy<unknown[]>(`${base}/${studentCode}/${idprograma}/${variant}/horarios`);
+        return await this.fetchLegacy<ScheduleItem[]>(`${base}/${studentCode}/${idprograma}/${variant}/horarios`);
       } catch (error) {
         lastError = error as Error;
       }
@@ -223,14 +223,14 @@ export class LegacyClient {
     throw lastError ?? new Error("No se pudo obtener horario en ninguna variante de ciclo");
   }
 
-  async getBoletas(studentCode: string, idprograma: string, ciclo: string): Promise<unknown[]> {
+  async getBoletas(studentCode: string, idprograma: string, ciclo: string): Promise<GradeItem[]> {
     const base = `${LEGACY_BASE}/alumnos-esc`;
     const variants = cycleVariants(ciclo);
     let lastError: Error | null = null;
 
     for (const variant of variants) {
       try {
-        return await this.fetchLegacy<unknown[]>(`${base}/${studentCode}/${idprograma}/${variant}/boletas`);
+        return await this.fetchLegacy<GradeItem[]>(`${base}/${studentCode}/${idprograma}/${variant}/boletas`);
       } catch (error) {
         lastError = error as Error;
       }
@@ -241,7 +241,7 @@ export class LegacyClient {
 
   async getHistoricalBoletas(studentCode: string, idprograma: string, plans: PlanItem[]): Promise<BoletasHistoricas> {
     const cycles = buildHistoricalCycleCandidates(plans);
-    const byCycle: Record<string, unknown[]> = {};
+    const byCycle: Record<string, GradeItem[]> = {};
 
     for (const cycle of cycles) {
       try {
@@ -258,7 +258,7 @@ export class LegacyClient {
     return { byCycle, consolidated };
   }
 
-  async getKardexAdvanced(studentCode: string, plan: PlanItem): Promise<KardexResult> {
+  async getKardexAdvanced(studentCode: string, plan: PlanItem): Promise<KardexResult<KardexData>> {
     const attempts: KardexResult["attempts"] = [];
     const endpoints = buildKardexEndpointCandidates(studentCode, plan);
 
@@ -278,10 +278,10 @@ export class LegacyClient {
         });
 
         if (res.ok && res.json?.respuesta !== undefined) {
-          const r = res.json.respuesta as unknown;
+          const r = res.json.respuesta;
           const hasContent = Array.isArray(r) ? r.length > 0 : r !== null && r !== "";
           if (hasContent) {
-            return { data: r, attempts };
+            return { data: r as KardexData, attempts };
           }
         }
       } catch (error) {

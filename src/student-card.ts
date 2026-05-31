@@ -1,4 +1,4 @@
-import type { LoginSuccess, StudentCardResult } from "./types.js";
+import type { LoginSuccess, StudentCardResult, StudentCardValue } from "./types.js";
 import { SOYUDG_BASE } from "./constants.js";
 
 function encodeStudentCode(studentCode: string): string {
@@ -7,13 +7,13 @@ function encodeStudentCode(studentCode: string): string {
   return Buffer.from(once, "utf8").toString("base64");
 }
 
-export async function getStudentCard(session: LoginSuccess): Promise<StudentCardResult> {
+export async function getStudentCard(session: LoginSuccess): Promise<StudentCardResult<StudentCardValue>> {
   const encryptedId = encodeStudentCode(session.usua_id);
   const url = `${SOYUDG_BASE}?encryptedId=${encodeURIComponent(encryptedId)}`;
 
   try {
     const response = await fetch(url);
-    const data = (await response.json()) as { data?: { error?: unknown } };
+    const data = (await response.json()) as { data?: (StudentCardValue & { error?: unknown }) };
 
     if (!response.ok || data?.data?.error) {
       throw new Error(`HTTP ${response.status} al consultar studentCard`);
