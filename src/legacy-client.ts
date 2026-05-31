@@ -175,7 +175,7 @@ export class LegacyClient {
           await new Promise((resolve) => setTimeout(resolve, 350 * attempt));
           continue;
         }
-        throw new Error(`HTTP ${res.status}: respuesta no JSON (${res.raw.slice(0, 200)})`);
+        throw new Error(`HTTP ${res.status} GET ${url}: respuesta no JSON (${res.raw.slice(0, 200)})`);
       }
 
       if (!res.ok) {

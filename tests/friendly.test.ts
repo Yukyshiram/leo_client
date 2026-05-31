@@ -12,6 +12,7 @@ describe("createLeoClient", () => {
     };
 
     leo.session.use(session);
+    leo.session.useStudentCode("219000000");
 
     expect(leo.login.signIn).toBeTypeOf("function");
     expect(leo.student.plans).toBeTypeOf("function");
@@ -19,9 +20,11 @@ describe("createLeoClient", () => {
     expect(leo.academic.history.grades).toBeTypeOf("function");
     expect(leo.academic.transcript).toBeTypeOf("function");
     expect(leo.session.current()).toEqual(session);
+    expect(leo.session.studentCode()).toBe("219000000");
 
     leo.session.clear();
 
     expect(leo.session.current()).toBeNull();
+    expect(leo.session.studentCode()).toBeNull();
   });
 });

@@ -34,6 +34,8 @@ export type LeoFriendlyClient = {
   session: {
     current: () => LoginSuccess | null;
     use: (session: LoginSuccess) => void;
+    useStudentCode: (studentCode: string | number) => void;
+    studentCode: () => string | null;
     clear: () => void;
   };
   raw: LeoEndpointCX;
@@ -89,8 +91,15 @@ export function createLeoClient(options: LeoEndpointCXOptions): LeoFriendlyClien
       use(session) {
         sdk.setSession(session);
       },
+      useStudentCode(studentCode) {
+        sdk.setStudentCode(String(studentCode).trim());
+      },
+      studentCode() {
+        return sdk.getStudentCode();
+      },
       clear() {
         sdk.setSession(null);
+        sdk.setStudentCode(null);
       },
     },
     raw: sdk,
