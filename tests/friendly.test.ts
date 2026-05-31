@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { createLeoClient } from "../src/index.js";
+import { createLeoClient, isLeoClientError } from "../src/index.js";
 import type { LoginSuccess } from "../src/types.js";
 
 describe("createLeoClient", () => {
@@ -26,5 +26,35 @@ describe("createLeoClient", () => {
 
     expect(leo.session.current()).toBeNull();
     expect(leo.session.studentCode()).toBeNull();
+  });
+});
+
+describe("input validation", () => {
+  test("rechaza privateKey vacia", () => {
+    try {
+      createLeoClient({ privateKey: "" });
+      throw new Error("Expected createLeoClient to throw");
+    } catch (error) {
+      expect(isLeoClientError(error)).toBe(true);
+      if (isLeoClientError(error)) {
+        expect(error.code).toBe("MISSING_PRIVATE_KEY");
+      }
+    }
+  });
+
+  test("rechaza codigo vacio antes de llamar LEO", async () => {
+    const leo = createLeoClient({ privateKey: "test-key" });
+
+    await expect(leo.login.signIn("", "password")).rejects.toMatchObject({
+      code: "MISSING_STUDENT_CODE",
+    });
+  });
+
+  test("rechaza password vacio antes de llamar LEO", async () => {
+    const leo = createLeoClient({ privateKey: "test-key" });
+
+    await expect(leo.login.signIn("219000000", "")).rejects.toMatchObject({
+      code: "MISSING_PASSWORD",
+    });
   });
 });

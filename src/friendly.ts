@@ -1,4 +1,5 @@
 import { LeoEndpointCX } from "./sdk.js";
+import { LeoClientError } from "./errors.js";
 import {
   completedCoursesFromHistory,
   completedCoursesFromKardex,
@@ -9,6 +10,7 @@ import {
 } from "./summary.js";
 import type {
   AcademicCycleSummary,
+  AcademicFullProfile,
   AcademicProgress,
   BoletasHistoricas,
   CompletedCourse,
@@ -51,6 +53,7 @@ export type LeoFriendlyClient = {
       cycles: (plan: PlanItem, plans?: PlanItem[], studentCode?: string | number) => Promise<AcademicCycleSummary[]>;
       progress: (plan: PlanItem, studentCode?: string | number) => Promise<AcademicProgress>;
       schedulesByCycle: (plan: PlanItem, cycles?: string[], studentCode?: string | number) => Promise<CycleSchedule[]>;
+      fullProfile: (plan?: PlanItem, plans?: PlanItem[], studentCode?: string | number) => Promise<AcademicFullProfile>;
     };
   };
   session: {
@@ -122,6 +125,41 @@ export function createLeoClient(options: LeoEndpointCXOptions): LeoFriendlyClien
 
     return schedulesByCycle(Object.fromEntries(entries));
   };
+  const fullProfile = async (planArg?: PlanItem, plansArg?: PlanItem[], studentCode?: string | number) => {
+    const plans = plansArg ?? (await getPlans(studentCode));
+    const plan = planArg ?? plans.find((item) => item.idestatus === "AC") ?? plans[0];
+
+    if (!plan) {
+      throw new LeoClientError("MISSING_PROGRAM_ID", "No se encontro ningun plan academico para construir el perfil.");
+    }
+    if (!plan.idprograma) {
+      throw new LeoClientError("MISSING_PROGRAM_ID", "El plan academico no tiene idprograma.");
+    }
+
+    const [kardex, studentCard] = await Promise.all([getKardex(plan, studentCode), getCard()]);
+    let completedCourses = completedCoursesFromKardex(kardex.data);
+
+    if (completedCourses.length === 0) {
+      const history = await getHistoricalBoletas(plan.idprograma, plans, studentCode);
+      completedCourses = completedCoursesFromHistory(history);
+    }
+
+    const cycles = cycleSummariesFromCourses(completedCourses);
+    const progress = progressFromKardex(kardex.data);
+    const schedules = await getSchedulesByCycle(plan, cycles.map((item) => item.ciclo), studentCode);
+
+    return {
+      session: sdk.getSession(),
+      plan,
+      plans,
+      cycles,
+      completedCourses,
+      progress,
+      schedules,
+      kardex,
+      studentCard,
+    };
+  };
 
   return {
     login: {
@@ -150,6 +188,7 @@ export function createLeoClient(options: LeoEndpointCXOptions): LeoFriendlyClien
         cycles: cycleSummaries,
         progress,
         schedulesByCycle: getSchedulesByCycle,
+        fullProfile,
       },
     },
     session: {

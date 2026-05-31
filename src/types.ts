@@ -222,6 +222,18 @@ export type CycleSchedule = {
   error?: string;
 };
 
+export type AcademicFullProfile = {
+  session: LoginSuccess | null;
+  plan: PlanItem;
+  plans: PlanItem[];
+  cycles: AcademicCycleSummary[];
+  completedCourses: CompletedCourse[];
+  progress: AcademicProgress;
+  schedules: CycleSchedule[];
+  kardex: KardexResult<KardexData>;
+  studentCard: StudentCardResult<StudentCardValue>;
+};
+
 export type LeoEndpointCXOptions = {
   privateKey: string;
   retries?: number;

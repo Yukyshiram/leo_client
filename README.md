@@ -234,6 +234,7 @@ await leo.academic.summary.cycles(plan, plans);
 await leo.academic.summary.completedCourses(plan, plans);
 await leo.academic.summary.progress(plan);
 await leo.academic.summary.schedulesByCycle(plan);
+await leo.academic.summary.fullProfile(plan, plans);
 ```
 
 Aliases disponibles:
@@ -612,6 +613,92 @@ const ciclos: AcademicCycleSummary[] = await leo.academic.summary.cycles(plans[0
 const materiasCursadas: CompletedCourse[] = await leo.academic.summary.completedCourses(plans[0], plans);
 const progreso: AcademicProgress = await leo.academic.summary.progress(plans[0]);
 const horarios: CycleSchedule[] = await leo.academic.summary.schedulesByCycle(plans[0]);
+```
+
+## Perfil Completo
+
+Para una web o API, puedes pedir un perfil academico completo en una sola llamada de alto nivel:
+
+```js
+const profile = await leo.academic.summary.fullProfile();
+
+console.log(profile.plan);
+console.log(profile.cycles);
+console.log(profile.completedCourses);
+console.log(profile.progress);
+console.log(profile.schedules);
+console.log(profile.kardex);
+console.log(profile.studentCard);
+```
+
+Tambien puedes pasar `plan` y `plans` si ya los tienes:
+
+```js
+const plans = await leo.student.plans();
+const plan = plans.find((item) => item.idestatus === "AC") ?? plans[0];
+
+const profile = await leo.academic.summary.fullProfile(plan, plans);
+```
+
+Salida:
+
+```ts
+type AcademicFullProfile = {
+  session: LoginSuccess | null;
+  plan: PlanItem;
+  plans: PlanItem[];
+  cycles: AcademicCycleSummary[];
+  completedCourses: CompletedCourse[];
+  progress: AcademicProgress;
+  schedules: CycleSchedule[];
+  kardex: KardexResult<KardexData>;
+  studentCard: StudentCardResult<StudentCardValue>;
+};
+```
+
+## Manejo De Errores
+
+La libreria lanza `LeoClientError` para errores comunes y validaciones.
+
+```js
+const { createLeoClient, isLeoClientError } = require("@skl-connect/leo-client");
+
+try {
+  await leo.login.signIn(codigo, password);
+} catch (error) {
+  if (isLeoClientError(error)) {
+    console.error(error.code);
+    console.error(error.message);
+    console.error(error.status);
+    return;
+  }
+
+  console.error(error);
+}
+```
+
+Codigos principales:
+
+```txt
+MISSING_PRIVATE_KEY
+MISSING_STUDENT_CODE
+MISSING_PASSWORD
+MISSING_SESSION
+MISSING_PROGRAM_ID
+INVALID_CREDENTIALS
+HTTP_ERROR
+NON_JSON_RESPONSE
+LEGACY_EMPTY_RESPONSE
+LEGACY_API_ERROR
+```
+
+Ejemplos:
+
+```txt
+MISSING_STUDENT_CODE: Debes proporcionar el codigo de alumno.
+MISSING_PASSWORD: Debes proporcionar la contrasena de LEO.
+INVALID_CREDENTIALS: No se pudo iniciar sesion en LEO. Revisa codigo, contrasena y token.pem.
+MISSING_SESSION: No hay sesion activa. Ejecuta login.signIn() primero o usa session.use().
 ```
 
 Tipos principales:

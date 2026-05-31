@@ -1,5 +1,7 @@
 export { LeoEndpointCX } from "./sdk.js";
 export { createLeoClient } from "./friendly.js";
+export { LeoClientError, isLeoClientError } from "./errors.js";
+export type { LeoClientErrorCode } from "./errors.js";
 export { loginWithPem } from "./auth.js";
 export { LegacyClient } from "./legacy-client.js";
 export { buildHistoricalCycleCandidates, buildKardexEndpointCandidates, cycleVariants, parseCycle } from "./legacy-client.js";
@@ -17,6 +19,7 @@ export type { LeoFriendlyClient } from "./friendly.js";
 export type {
   ApiEnvelope,
   AcademicCycleSummary,
+  AcademicFullProfile,
   AcademicProgress,
   BoletasHistoricas,
   CompletedCourse,

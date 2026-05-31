@@ -1,4 +1,5 @@
 import { loginWithPem } from "./auth.js";
+import { LeoClientError } from "./errors.js";
 import { LegacyClient } from "./legacy-client.js";
 import { getStudentCard } from "./student-card.js";
 import type {
@@ -21,13 +22,24 @@ export class LeoEndpointCX {
   private studentCode: string | null = null;
 
   constructor(options: LeoEndpointCXOptions) {
+    if (!options.privateKey?.trim()) {
+      throw new LeoClientError("MISSING_PRIVATE_KEY", "Debes proporcionar privateKey. Lee token.pem y pasalo a createLeoClient({ privateKey }).");
+    }
     this.privateKey = options.privateKey;
     this.retries = options.retries ?? 3;
   }
 
   async login(user: string, password: string): Promise<LoginSuccess> {
-    this.studentCode = user;
-    this.session = await loginWithPem(user, password, this.privateKey);
+    const studentCode = String(user ?? "").trim();
+    if (!studentCode) {
+      throw new LeoClientError("MISSING_STUDENT_CODE", "Debes proporcionar el codigo de alumno.");
+    }
+    if (!String(password ?? "")) {
+      throw new LeoClientError("MISSING_PASSWORD", "Debes proporcionar la contrasena de LEO.");
+    }
+
+    this.studentCode = studentCode;
+    this.session = await loginWithPem(studentCode, password, this.privateKey);
     return this.session;
   }
 
@@ -49,7 +61,7 @@ export class LeoEndpointCX {
 
   private requireSession(): LoginSuccess {
     if (!this.session) {
-      throw new Error("No hay sesion activa. Ejecuta login() primero o usa setSession().");
+      throw new LeoClientError("MISSING_SESSION", "No hay sesion activa. Ejecuta login.signIn() primero o usa session.use().");
     }
     return this.session;
   }

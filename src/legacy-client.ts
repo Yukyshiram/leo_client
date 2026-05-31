@@ -1,5 +1,6 @@
 import { createIss, getSessionToken } from "./crypto.js";
 import { LEGACY_BASE, LEGACY_ORIGIN, LEGACY_REFERER } from "./constants.js";
+import { LeoClientError } from "./errors.js";
 import type { ApiEnvelope, BoletasHistoricas, GradeItem, KardexData, KardexResult, PlanItem, ScheduleItem } from "./types.js";
 
 type LegacyMethod = "GET" | "POST";
@@ -175,11 +176,15 @@ export class LegacyClient {
           await new Promise((resolve) => setTimeout(resolve, 350 * attempt));
           continue;
         }
-        throw new Error(`HTTP ${res.status} GET ${url}: respuesta no JSON (${res.raw.slice(0, 200)})`);
+        throw new LeoClientError("NON_JSON_RESPONSE", `LEO respondio HTTP ${res.status} en GET ${url}, pero la respuesta no fue JSON.`, {
+          status: res.status,
+        });
       }
 
       if (!res.ok) {
-        const err = new Error(`HTTP ${res.status}: ${res.json.mensaje || "Error desconocido"}`);
+        const err = new LeoClientError("HTTP_ERROR", `LEO respondio HTTP ${res.status}: ${res.json.mensaje || "Error desconocido"}`, {
+          status: res.status,
+        });
         if (res.status >= 500 && attempt < this.retries) {
           lastError = err;
           await new Promise((resolve) => setTimeout(resolve, 350 * attempt));
@@ -189,18 +194,18 @@ export class LegacyClient {
       }
 
       if (res.json.respuesta === undefined) {
-        throw new Error(`Respuesta legacy sin datos: ${JSON.stringify(res.json).slice(0, 250)}`);
+        throw new LeoClientError("LEGACY_EMPTY_RESPONSE", `Respuesta legacy sin datos: ${JSON.stringify(res.json).slice(0, 250)}`);
       }
 
       if (Array.isArray(res.json.respuesta)) {
         const first = res.json.respuesta[0] as { error?: string } | undefined;
-        if (first?.error) throw new Error(first.error);
+        if (first?.error) throw new LeoClientError("LEGACY_API_ERROR", first.error);
       }
 
       return res.json.respuesta as T;
     }
 
-    throw lastError ?? new Error("No se pudo consultar endpoint legacy");
+    throw lastError ?? new LeoClientError("HTTP_ERROR", "No se pudo consultar endpoint legacy");
   }
 
   async getPlans(studentCode: string): Promise<PlanItem[]> {
@@ -220,7 +225,7 @@ export class LegacyClient {
       }
     }
 
-    throw lastError ?? new Error("No se pudo obtener horario en ninguna variante de ciclo");
+    throw lastError ?? new LeoClientError("HTTP_ERROR", "No se pudo obtener horario en ninguna variante de ciclo");
   }
 
   async getBoletas(studentCode: string, idprograma: string, ciclo: string): Promise<GradeItem[]> {
@@ -236,7 +241,7 @@ export class LegacyClient {
       }
     }
 
-    throw lastError ?? new Error("No se pudieron obtener boletas en ninguna variante de ciclo");
+    throw lastError ?? new LeoClientError("HTTP_ERROR", "No se pudieron obtener boletas en ninguna variante de ciclo");
   }
 
   async getHistoricalBoletas(studentCode: string, idprograma: string, plans: PlanItem[]): Promise<BoletasHistoricas> {
